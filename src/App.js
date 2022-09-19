@@ -1,59 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaSearch } from 'react-icons/fa';
-import { useFetch } from './useFetch';
-import Photo from './Photo';
-const clientID = `?client_id=${process.env.REACT_APP_ACCESS_KEY}`;
-// const pixabay(`https://pixabay.com/api/?key=28343049-d212888c474dea82932fe7020&q=${name}&image_type=photo&orientation=horizontal&safesearch=true&page=${pageNum}&per_page=40`).
 
-const mainUrl = `https://api.unsplash.com/photos/${clientID}`;
+import Photo from './Photo';
+
+// const pixabay(`https://pixabay.com/api/?key=28343049-d212888c474dea82932fe7020&q=${name}&image_type=photo&orientation=horizontal&safesearch=true&page=${pageNum}&per_page=40`).
+const clientID = `?client_id=${process.env.REACT_APP_ACCESS_KEY}`;
+const mainUrl = `https://api.unsplash.com/photos/`;
 const searchUrl = `https://api.unsplash.com/search/photos/`;
 
 function App() {
   const [query, setQuery] = useState('');
-  const urlQuery = `&query=${query}`;
-  const [page, setPage] = useState(1);
-  const [photo, setPhoto] = useState([]);
 
-  // const { loading, data } = useFetch(
-  //   `${searchUrl}${clientID}${urlQuery}`,
-  //   page
-  
-     let queryUrl = `${searchUrl}${clientID}${urlQuery}`;
-    
-  
-  
-    let preloadUrl = mainUrl;
-    
-  
-  const { loading, data } = useFetch(query?queryUrl:preloadUrl, page);
+  const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [page, setPage] = useState(1);
+
+  const mounted = useRef(false);
+  const [newImages, setNewImages] = useState(false);
+  const fetchImages = async () => {
+    setLoading(true);
+    let url;
+    const urlPage = `&page=${page}`;
+    const urlQuery = `&query=${query}`;
+    if (query) {
+      url = `${searchUrl}${clientID}${urlPage}${urlQuery}`;
+    } else {
+      url = `${mainUrl}${clientID}${urlPage}`;
+    }
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      setPhotos((oldPhotos) => {
+        if (query && page === 1) {
+          return data.results;
+        } else if (query) {
+          return [...oldPhotos, ...data.results];
+        } else {
+          return [...oldPhotos, ...data];
+        }
+      });
+      setNewImages(false);
+      setLoading(false);
+    } catch (error) {
+      setNewImages(false);
+
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    setPhoto({ data });
-    console.log(photo);
-  }, []);
-  // console.log(data)
-  useEffect(() => {
-    const event = window.addEventListener('scroll', () => {
-      if (
-        !loading &&
-        window.innerHeight + window.scrollY >= document.body.scrollHeight - 2
-      ) {
-        setPage(page + 1);
-        console.log(typeof page, page);
-      }
-    });
-    return () => {
-      window.removeEventListener('scroll', event);
-    };
+    fetchImages();
+    // eslint-disable-next-line
   }, [page]);
+
+   useEffect(() => {
+     if (!mounted.current) {
+       mounted.current = true;
+       return;
+     }
+     if (!newImages) return;
+     if (loading) return;
+     setPage((oldPage) => oldPage + 1);
+
+     // eslint-disable-next-line
+   }, [newImages]);
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!query) return;
     if (page === 1) {
-      
+      fetchImages();
     }
     setPage(1);
   };
-
+    const event = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.body.scrollHeight - 2
+      ) {
+        setNewImages(true);
+      }
+    };
+  useEffect(() => {
+    window.addEventListener('scroll', event);
+    return () => window.removeEventListener('scroll', event);
+  }, []);
   return (
     <main>
       <section className='search'>
@@ -74,7 +103,7 @@ function App() {
       </section>
       <section className='photos'>
         <div className='photos-center'>
-          {data.map((photo, index) => {
+          {photos.map((photo, index) => {
             return <Photo key={index} {...photo} />;
           })}
         </div>
