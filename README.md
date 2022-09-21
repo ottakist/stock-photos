@@ -1,2 +1,2 @@
 #stock-photos
-[stock-photos](https://willowy-bienenstitch-851237.netlify.app/)
+[stock-photos](https://hilarious-bubblegum-941544.netlify.app/)
